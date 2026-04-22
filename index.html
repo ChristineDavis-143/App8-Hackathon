@@ -202,7 +202,7 @@
                 resultText = "🟡 POSITIVE: Sample appears YELLOW (amplification detected)";
             }
             // Pink detection: Red and Blue are high, Green is low
-            else if (avgR > 150 && avgB > 150 && avgG < 150) {
+            else if (avgR > 150 && avgB > 100 && avgG < avgR && avgB > avgG) { //fixed color issue
                 resultText = "🔴 NEGATIVE: Sample appears PINK (no amplification)";
             }
             // If differences aren't clear enough
