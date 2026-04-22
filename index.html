@@ -22,186 +22,198 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LAMP Color Detection</title>
+    <title>LAMP Color Diagnostic App</title>
 
     <style>
         body {
             font-family: Arial, sans-serif;
             text-align: center;
             background-color: #f4f4f4;
-        }
-
-        /* Main container (makes it look like an app) */
-        .container {
-            background: white;
+            margin: 20px;
             padding: 20px;
-            margin: 40px auto;
-            width: 350px;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
 
         h1 {
             color: #333;
+            margin-bottom: 10px;
         }
 
-        input {
-            margin-top: 10px;
+        p {
+            color: #666;
+            font-size: 16px;
+            margin-bottom: 20px;
         }
 
-        #preview {
-            margin-top: 15px;
-            max-width: 100%;
-            border-radius: 8px;
+        input[type="file"] {
+            padding: 10px;
+            margin: 10px 0;
+            cursor: pointer;
         }
 
         button {
-            margin-top: 10px;
-            padding: 10px;
-            border: none;
-            border-radius: 8px;
             background-color: #4CAF50;
             color: white;
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
             cursor: pointer;
+            margin: 10px;
         }
 
         button:hover {
             background-color: #45a049;
         }
 
-        /* RESULT BOX */
-        #result {
+        #preview {
             margin-top: 20px;
-            padding: 15px;
-            border-radius: 10px;
+            max-width: 400px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            display: none;
+        }
+
+        #result {
+            margin-top: 30px;
+            font-size: 24px;
             font-weight: bold;
+            padding: 20px;
+            background-color: white;
+            border-radius: 5px;
+            min-height: 40px;
         }
 
-        /* Color-coded results */
-        .positive {
-            background-color: #fff59d; /* yellow */
-            color: #555;
-        }
-
-        .negative {
-            background-color: #f8bbd0; /* pink */
-            color: #555;
-        }
-
-        .uncertain {
-            background-color: #e0e0e0;
+        .debug-info {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #e8f4f8;
+            border-radius: 5px;
+            font-size: 12px;
+            color: #333;
         }
     </style>
 </head>
 
 <body>
 
-<div class="container">
-
-    <h1>LAMP Test Analyzer</h1>
-    <p>Upload an image to detect if the sample is POSITIVE or NEGATIVE</p>
+    <h1>LAMP Color Diagnostic App</h1>
+    <p>Upload an image of your LAMP test to determine if it is POSITIVE (yellow) or NEGATIVE (pink).</p>
 
     <input type="file" id="imageInput" accept="image/*">
+    <br>
+    <button onclick="analyzeImage()">Analyze Image</button>
 
     <br>
-    <img id="preview" src="">
-
-    <canvas id="canvas" style="display:none;"></canvas>
+    <img id="preview" alt="Image Preview">
 
     <div id="result"></div>
+    <div class="debug-info" id="debugInfo"></div>
 
-</div>
+    <script>
 
-<script>
+        const imageInput = document.getElementById("imageInput");
+        const preview = document.getElementById("preview");
+        const resultDiv = document.getElementById("result");
+        const debugInfo = document.getElementById("debugInfo");
 
-document.getElementById('imageInput').addEventListener('change', function(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+        let uploadedImage = null;
 
-    const reader = new FileReader();
+        // Event listener for image upload
+        imageInput.addEventListener("change", function(event) {
+            const file = event.target.files[0];
 
-    reader.onload = function(event) {
-        const img = new Image();
+            if (file) {
+                const reader = new FileReader();
 
-        // Show preview
-        document.getElementById("preview").src = event.target.result;
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = "block";
 
-        img.onload = function() {
-            const canvas = document.getElementById('canvas');
-            const ctx = canvas.getContext('2d');
+                    // Create image object for analysis
+                    uploadedImage = new Image();
+                    uploadedImage.src = e.target.result;
+                };
 
-            canvas.width = img.width;
-            canvas.height = img.height;
+                reader.readAsDataURL(file);
+            }
+        });
 
-            ctx.drawImage(img, 0, 0);
+        // Main analysis function
+        function analyzeImage() {
 
-            detectColors(ctx, canvas.width, canvas.height);
-        };
+            if (!uploadedImage) {
+                alert("Please upload an image first!");
+                return;
+            }
 
-        img.src = event.target.result;
-    };
-
-    reader.readAsDataURL(file);
-});
-
-function detectColors(ctx, width, height) {
-    const imageData = ctx.getImageData(0, 0, width, height);
-    const data = imageData.data;
-
-    let yellowCount = 0;
-    let pinkCount = 0;
-
-    for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-
-        // Yellow detection
-        if (r > 200 && g > 200 && b < 100) {
-            yellowCount++;
+            // Wait for image to fully load
+            if (!uploadedImage.complete) {
+                uploadedImage.onload = function() {
+                    performAnalysis();
+                };
+            } else {
+                performAnalysis();
+            }
         }
-        // Pink detection
-        else if (r > 200 && b > 200 && g < 100) {
-            pinkCount++;
+
+        function performAnalysis() {
+            // Create invisible canvas
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+
+            // Set canvas size to match image
+            canvas.width = uploadedImage.width;
+            canvas.height = uploadedImage.height;
+
+            // Draw image onto canvas
+            ctx.drawImage(uploadedImage, 0, 0);
+
+            // Extract pixel data
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            // Calculate average color values
+            let totalR = 0;
+            let totalG = 0;
+            let totalB = 0;
+
+            let pixelCount = data.length / 4;
+
+            // Loop through all pixels and sum RGB values
+            for (let i = 0; i < data.length; i += 4) {
+                totalR += data[i];     // Red
+                totalG += data[i + 1]; // Green
+                totalB += data[i + 2]; // Blue
+            }
+
+            // Calculate average color values
+            const avgR = Math.round(totalR / pixelCount);
+            const avgG = Math.round(totalG / pixelCount);
+            const avgB = Math.round(totalB / pixelCount);
+
+            console.log("Average RGB:", avgR, avgG, avgB);
+            debugInfo.innerText = `Debug Info - Average RGB: R=${avgR}, G=${avgG}, B=${avgB}`;
+
+            // Improved color detection logic
+            let resultText = "";
+
+            // Yellow detection: Red and Green are high, Blue is low
+            if (avgR > 150 && avgG > 150 && avgB < 150) {
+                resultText = "🟡 POSITIVE: Sample appears YELLOW (amplification detected)";
+            }
+            // Pink detection: Red and Blue are high, Green is low
+            else if (avgR > 150 && avgB > 150 && avgG < 150) {
+                resultText = "🔴 NEGATIVE: Sample appears PINK (no amplification)";
+            }
+            // If differences aren't clear enough
+            else {
+                resultText = "⚠️ UNCERTAIN: Color is ambiguous, please retest";
+            }
+
+            resultDiv.innerText = resultText;
         }
-    }
 
-    displayResults(yellowCount, pinkCount);
-}
-
-function displayResults(yellowCount, pinkCount) {
-    const resultDiv = document.getElementById("result");
-
-    // Clear previous result
-    resultDiv.className = "";
-    
-    const total = yellowCount + pinkCount;
-
-    if (total === 0) {
-        resultDiv.innerText = "⚠️ No clear result detected";
-        resultDiv.classList.add("uncertain");
-        return;
-    }
-
-    const yellowPercent = ((yellowCount / total) * 100).toFixed(1);
-    const pinkPercent = ((pinkCount / total) * 100).toFixed(1);
-
-    if (yellowCount > pinkCount) {
-        resultDiv.innerText = `🟡 POSITIVE\nYellow: ${yellowPercent}%`;
-        resultDiv.classList.add("positive");
-    } 
-    else if (pinkCount > yellowCount) {
-        resultDiv.innerText = `🔴 NEGATIVE\nPink: ${pinkPercent}%`;
-        resultDiv.classList.add("negative");
-    } 
-    else {
-        resultDiv.innerText = "⚠️ UNCERTAIN RESULT";
-        resultDiv.classList.add("uncertain");
-    }
-}
-
-</script>
+    </script>
 
 </body>
 </html>
-
