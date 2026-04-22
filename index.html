@@ -17,78 +17,191 @@
   Author 2: Christine Davis 
 -->
 
-
- 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Color Detection</title>
+    <title>LAMP Color Detection</title>
+
     <style>
-        body { font-family: Arial, sans-serif; }
-        h1 { color: #333; }
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+        }
+
+        /* Main container (makes it look like an app) */
+        .container {
+            background: white;
+            padding: 20px;
+            margin: 40px auto;
+            width: 350px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        input {
+            margin-top: 10px;
+        }
+
+        #preview {
+            margin-top: 15px;
+            max-width: 100%;
+            border-radius: 8px;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        /* RESULT BOX */
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        /* Color-coded results */
+        .positive {
+            background-color: #fff59d; /* yellow */
+            color: #555;
+        }
+
+        .negative {
+            background-color: #f8bbd0; /* pink */
+            color: #555;
+        }
+
+        .uncertain {
+            background-color: #e0e0e0;
+        }
     </style>
 </head>
+
 <body>
-    <h1>Color Detection App</h1>
-    <input type="file" id="imageInput" />
+
+<div class="container">
+
+    <h1>LAMP Test Analyzer</h1>
+    <p>Upload an image to detect if the sample is POSITIVE or NEGATIVE</p>
+
+    <input type="file" id="imageInput" accept="image/*">
+
+    <br>
+    <img id="preview" src="">
+
     <canvas id="canvas" style="display:none;"></canvas>
-    <script>
-        document.getElementById('imageInput').addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.getElementById('canvas');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    ctx.drawImage(img, 0, 0);
-                    detectColors(ctx, canvas.width, canvas.height);
-                };
-                img.src = event.target.result;
-            };
-            reader.readAsDataURL(file);
-        });
 
-        function detectColors(ctx, width, height) {
-            const imageData = ctx.getImageData(0, 0, width, height);
-            const data = imageData.data;
-            let yellowCount = 0;
-            let pinkCount = 0;
-            for (let i = 0; i < data.length; i += 4) {
-                const r = data[i];
-                const g = data[i + 1];
-                const b = data[i + 2];
-                // Improved thresholds for color detection
-                if (r > 200 && g > 200 && b < 100) { // Yellow
-                    yellowCount++;
-                } else if (r > 200 && b > 200 && g < 100) { // Pink
-                    pinkCount++;
-                }
-            }
-            displayResults(yellowCount, pinkCount);
-        }
+    <div id="result"></div>
 
-        function displayResults(yellowCount, pinkCount) {
-            const totalCount = yellowCount + pinkCount;
-            const resultDiv = document.createElement('div');
-            if (totalCount > 0) {
-                if (yellowCount > pinkCount) {
-                    resultDiv.innerText = `Detected Color: Yellow`;
-                } else if (pinkCount > yellowCount) {
-                    resultDiv.innerText = `Detected Color: Pink`;
-                } else {
-                    resultDiv.innerText = `Detected Colors: Yellow and Pink`;
-                }
-            } else {
-                resultDiv.innerText = `No valid colors detected.`;
-            }
-            document.body.appendChild(resultDiv);
+</div>
+
+<script>
+
+document.getElementById('imageInput').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function(event) {
+        const img = new Image();
+
+        // Show preview
+        document.getElementById("preview").src = event.target.result;
+
+        img.onload = function() {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+
+            canvas.width = img.width;
+            canvas.height = img.height;
+
+            ctx.drawImage(img, 0, 0);
+
+            detectColors(ctx, canvas.width, canvas.height);
+        };
+
+        img.src = event.target.result;
+    };
+
+    reader.readAsDataURL(file);
+});
+
+function detectColors(ctx, width, height) {
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+
+    let yellowCount = 0;
+    let pinkCount = 0;
+
+    for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+
+        // Yellow detection
+        if (r > 200 && g > 200 && b < 100) {
+            yellowCount++;
         }
-    </script>
+        // Pink detection
+        else if (r > 200 && b > 200 && g < 100) {
+            pinkCount++;
+        }
+    }
+
+    displayResults(yellowCount, pinkCount);
+}
+
+function displayResults(yellowCount, pinkCount) {
+    const resultDiv = document.getElementById("result");
+
+    // Clear previous result
+    resultDiv.className = "";
+    
+    const total = yellowCount + pinkCount;
+
+    if (total === 0) {
+        resultDiv.innerText = "⚠️ No clear result detected";
+        resultDiv.classList.add("uncertain");
+        return;
+    }
+
+    const yellowPercent = ((yellowCount / total) * 100).toFixed(1);
+    const pinkPercent = ((pinkCount / total) * 100).toFixed(1);
+
+    if (yellowCount > pinkCount) {
+        resultDiv.innerText = `🟡 POSITIVE\nYellow: ${yellowPercent}%`;
+        resultDiv.classList.add("positive");
+    } 
+    else if (pinkCount > yellowCount) {
+        resultDiv.innerText = `🔴 NEGATIVE\nPink: ${pinkPercent}%`;
+        resultDiv.classList.add("negative");
+    } 
+    else {
+        resultDiv.innerText = "⚠️ UNCERTAIN RESULT";
+        resultDiv.classList.add("uncertain");
+    }
+}
+
+</script>
+
 </body>
 </html>
+
