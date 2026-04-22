@@ -31,106 +31,245 @@
 -->
 
 
+```html
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
+    <title>LAMP Color Diagnostic App</title>
 
-    <meta name="viewport" content="width=device-width, initial-scale=.7">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <link rel="stylesheet" href="w3.css">
-    <link rel="stylesheet" href="w3-colors-flat.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.0.0/p5.min.js" integrity="sha512-At/xiUTqCg8jxnCMRNDhDVDm4qxlyPt1K+GrDhUvRvR8MjlBq0RH65OVVaCXn3OuvyVWK8CdlQpxgrc/5YspHw==" crossorigin="anonymous"></script>
-    <!--this is to reference the p5.js I use for this code-->
-    <script>
-        var docMod = document.lastModified; // gets last modified date and time of the index.html file
-        console.log("This file last modified  " + docMod); // displays last modified date and time in the javascipt browser console
-    </script>
+    <!-- 
+    ============================================
+    STYLING SECTION
+    This section defines how the app looks visually.
+    Includes layout, colors, fonts, and spacing.
+    ============================================
+    -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            margin: 20px;
+        }
 
+        h1 {
+            color: #333;
+        }
+
+        #preview {
+            margin-top: 20px;
+            max-width: 300px;
+            border: 2px solid #ccc;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
 </head>
-<script>
-    let sketch = function(p) { // this is used to credit pj5s by adding p in front to use the code
-        let pixelInfo; // declares variable pixelInfo
-        let pixelP; //declare the variable pixelP
-
-        let input; //declares the variable input for canvas purposes
-        let img; // declares the variable img
-
-        p.setup = function() { // how to create a canvas and choose a file to put into the canvas
-            p.createCanvas(500, 400) // this creates a canvas to paste the image
-            input = p.createFileInput(handleFile); // this is a choose file that can then choose an image from the device
-            input.position(400, 700); // this tells where to button on the app page
-            pixelP = p.createP('') // used for paragraph length text
-        }
-
-        p.draw = function() { // this is how to image process on the canvas
-            if (img) {
-                p.image(img, 0, 0, p.width, p.height); // this is telling the parameters of the canvas 
-                if (p.mouseX < 500 && p.mouseX >= 0 && p.mouseY < 400 && p.mouseY >= 0) { //setting up the rules for the canvas for the cursor to understand the pixel data
-                    pixelInfo = p.get(p.mouseX, p.mouseY) // this will get all the pixel info from inside the canvas
-                }
-
-                console.log(pixelInfo) //prints out the RGBA values and whether they fit criteria or yellow or not
-
-                if (pixelInfo && pixelInfo[0] >= 150 && pixelInfo[1] >= 120 && pixelInfo[2] <= 150) { // If statement that says if pixel info reaches a certain value or within those values
-
-                    pixelP.html("Yellow") // if the values fit the if statement, it will out put yellow
-                    console.log("Yellow") // this is to check if the if statement is working
-                    console.log(p.mouseX, p.mouseY) // this makes sure the cursor is going over every pixel 
-                } // check if pixelInfo is defined
-                else {
-                    pixelP.html("Not Yellow") // anything that doesn't fit the if statment will be Not Yellow
-                }
-
-
-
-            }
-        }
-        let handleFile = function(file) {
-            console.log(file.name) //this will tests out if the function is working
-            if (file.type === 'image') {
-                img = p.createImg(file.data, '');
-                console.log(img) // checks to see if img is defined
-                img.hide();
-            } else {
-                img = null;
-            }
-
-        }
-
-
-    };
-
-    new p5(sketch, 'container');
-</script>
-
-<style>
-    .header {
-        padding: 12px;
-        text-align: center;
-        background: orange;
-        color: white;
-        font-size: 12px;
-    }
-    
-    .footer {
-        position: fixed;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-        background-color: orange;
-        color: white;
-        text-align: center;
-    }
-</style>
 
 <body>
-    <div class="header">
-        <h1>Detecting Lead in Water</h1>
-    </div>
 
-    <div id="content" class="w3-container">
-        <p>This is a diagnostic app that can detect if lead is in your drinking water </p>
-        <p>Just insert the picture of a water sample to find out!
-        </p>
+    <!-- 
+    ============================================
+    HEADER SECTION
+    Title and instructions for the user
+    ============================================
+    -->
+    <h1>LAMP Color Diagnostic App</h1>
+    <p>Upload an image of your LAMP test to determine if it is POSITIVE (yellow) or NEGATIVE (pink).</p>
+
+    <!-- 
+    ============================================
+    IMAGE INPUT SECTION
+    Allows user to upload an image file
+    ============================================
+    -->
+    <input type="file" id="imageInput" accept="image/*">
+
+    <!-- Button to trigger analysis -->
+    <br>
+    <button onclick="analyzeImage()">Analyze Image</button>
+
+    <!-- 
+    ============================================
+    IMAGE PREVIEW
+    Displays uploaded image for user confirmation
+    ============================================
+    -->
+    <br>
+    <img id="preview" src="" alt="Image Preview">
+
+    <!-- 
+    ============================================
+    RESULT DISPLAY
+    Shows diagnostic result to user
+    ============================================
+    -->
+    <div id="result"></div>
+
+    <!-- 
+    ============================================
+    JAVASCRIPT SECTION
+    Handles:
+    - Image upload
+    - Pixel analysis
+    - Color detection
+    - Output decision
+    ============================================
+    -->
+    <script>
+
+        // Reference to input and preview elements
+        const imageInput = document.getElementById("imageInput");
+        const preview = document.getElementById("preview");
+
+        // Variable to store uploaded image
+        let uploadedImage = null;
+
+        /*
+        ============================================
+        EVENT LISTENER: IMAGE UPLOAD
+        When user selects a file:
+        - Read file
+        - Convert to displayable format
+        - Show preview
+        ============================================
+        */
+        imageInput.addEventListener("change", function(event) {
+            const file = event.target.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+
+                    // Create image object for analysis
+                    uploadedImage = new Image();
+                    uploadedImage.src = e.target.result;
+                };
+
+                reader.readAsDataURL(file);
+            }
+        });
+
+        /*
+        ============================================
+        MAIN FUNCTION: analyzeImage()
+        This function:
+        1. Draws image onto a hidden canvas
+        2. Extracts pixel color data
+        3. Averages RGB values
+        4. Determines if image is more yellow or pink
+        ============================================
+        */
+        function analyzeImage() {
+
+            // Check if image exists
+            if (!uploadedImage) {
+                alert("Please upload an image first!");
+                return;
+            }
+
+            // Create invisible canvas
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+
+            // Set canvas size to match image
+            canvas.width = uploadedImage.width;
+            canvas.height = uploadedImage.height;
+
+            // Draw image onto canvas
+            ctx.drawImage(uploadedImage, 0, 0);
+
+            /*
+            ============================================
+            EXTRACT PIXEL DATA
+            Each pixel has:
+            - Red (R)
+            - Green (G)
+            - Blue (B)
+            - Alpha (A)
+            Stored in array: [R, G, B, A, R, G, B, A...]
+            ============================================
+            */
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            // Variables to store total color values
+            let totalR = 0;
+            let totalG = 0;
+            let totalB = 0;
+
+            let pixelCount = data.length / 4;
+
+            /*
+            ============================================
+            LOOP THROUGH ALL PIXELS
+            Add up RGB values
+            ============================================
+            */
+            for (let i = 0; i < data.length; i += 4) {
+                totalR += data[i];     // Red
+                totalG += data[i + 1]; // Green
+                totalB += data[i + 2]; // Blue
+            }
+
+            // Calculate average color values
+            const avgR = totalR / pixelCount;
+            const avgG = totalG / pixelCount;
+            const avgB = totalB / pixelCount;
+
+            console.log("Average RGB:", avgR, avgG, avgB);
+
+            /*
+            ============================================
+            DECISION LOGIC
+            LAMP interpretation:
+            - Yellow = Positive → High Red + Green
+            - Pink = Negative → High Red + Blue
+
+            We compare which color dominates
+            ============================================
+            */
+
+            let resultText = "";
+
+            if (avgR > avgB && avgG > avgB) {
+                resultText = "🟡 POSITIVE: Sample appears YELLOW (amplification detected)";
+            } 
+            else if (avgR > avgG && avgB > avgG) {
+                resultText = "🔴 NEGATIVE: Sample appears PINK (no amplification)";
+            } 
+            else {
+                resultText = "⚠️ UNCERTAIN: Color is ambiguous, please retest";
+            }
+
+            /*
+            ============================================
+            DISPLAY RESULT TO USER
+            ============================================
+            */
+            document.getElementById("result").innerText = resultText;
+        }
+
+    </script>
+
+</body>
+</html>
+
+
 
 
 
